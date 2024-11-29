@@ -1,0 +1,27 @@
+try:
+        if 'url' in request.json:
+            text_input = request.json['url']
+            text = extract_from_url(text_input)
+        elif 'file' in request.files:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"error": "No file selected."}), 400
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            text = extract_from_pdf(file_path)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        
+        prompt = f"Summarize the following text:\n\n{text}"
+        response = client_cc.chat.completions.create(
+            model="gpt3516k",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150,
+            temperature=0.5
+        )
+        return jsonify({"summary": response.choices[0].message.content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
